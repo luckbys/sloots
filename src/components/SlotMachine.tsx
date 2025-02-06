@@ -5,6 +5,8 @@ import SlotReel from './SlotReel';
 import { Coins, ChevronUp, ChevronDown, Crown, Diamond, Star, Gift, Zap, TrendingUp, Trophy } from 'lucide-react';
 import WinHistory, { WinRecord } from './WinHistory';
 import { formatCurrency } from '../utils/format';
+import Confetti from './Confetti';
+import { useSound } from '../hooks/useSound';
 
 
 const SYMBOLS = ['🍒', '7️⃣', '🎰', '💎', '🌟', '🍋', '👑', '🃏'] as const;
@@ -74,6 +76,8 @@ const SlotMachine = () => {
   const [lastLoginDate, setLastLoginDate] = useState<string | null>(null);
   const [loginStreak, setLoginStreak] = useState(0);
   const [nextBonusTime, setNextBonusTime] = useState<Date | null>(null);
+  const [showConfetti, setShowConfetti] = useState(false);
+  const { play, toggleBackground } = useSound();
 
   const isWildcard = useCallback((symbol: string) => symbol === '🃏', []);
 
@@ -183,6 +187,14 @@ const SlotMachine = () => {
             }
             return prev;
           });
+        }
+
+        if (isJackpot) {
+          setShowConfetti(true);
+          play('jackpot');
+          setTimeout(() => setShowConfetti(false), 3000);
+        } else {
+          play('win');
         }
       } else {
         setStreak(0);
@@ -318,175 +330,184 @@ const SlotMachine = () => {
     };
   }, [isSpinning]);
 
+  // Ativar música de fundo quando o componente montar
+  useEffect(() => {
+    toggleBackground(true);
+    return () => toggleBackground(false);
+  }, []);
+
   return (
-    <div className="slot-machine min-h-screen p-4 flex flex-col bg-gradient-to-b from-purple-900/50 to-indigo-900/50">
-      {/* Cabeçalho com informações */}
-      <div className="grid grid-cols-4 gap-3 mb-6">
-        <div className="bg-black/40 p-3 rounded-xl border-2 border-yellow-500/30 shadow-lg backdrop-blur-sm">
-          <div className="flex items-center gap-2">
-            <Coins className="w-6 h-6 text-yellow-500" />
-            <span className="text-yellow-400 text-xl font-bold">{formatCurrency(balance)}</span>
-          </div>
-        </div>
-        
-        <div className="bg-black/40 p-3 rounded-xl border-2 border-purple-500/30 shadow-lg backdrop-blur-sm">
-          <div className="flex items-center gap-2">
-            <Star className="w-6 h-6 text-purple-400" />
-            <span className="text-purple-400 text-xl font-bold">Nível {level}</span>
-          </div>
-        </div>
-
-        <div className="bg-black/40 p-3 rounded-xl border-2 border-green-500/30 shadow-lg backdrop-blur-sm">
-          <div className="flex items-center gap-2">
-            <Gift className="w-6 h-6 text-green-400" />
-            <span className="text-green-400 text-xl font-bold">Dia {loginStreak}/7</span>
-          </div>
-        </div>
-
-        <div className="bg-black/40 p-3 rounded-xl border-2 border-pink-500/30 shadow-lg backdrop-blur-sm">
-          <div className="flex items-center justify-between">
-            <span className="text-pink-300 font-bold">Jackpot:</span>
-            <span className="text-pink-400 text-xl font-bold">{formatCurrency(jackpotAmount)}</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Área principal */}
-      <div className="flex-1 grid grid-cols-5 gap-6">
-        {/* Área do jogo */}
-        <div className="col-span-3 flex flex-col">
-          <div className="bg-black/40 p-6 rounded-xl border-2 border-indigo-500/30 shadow-lg backdrop-blur-sm flex-1 flex flex-col">
-            {/* XP Bar */}
-            <div className="mb-4">
-              <div className="flex justify-between text-xs mb-1">
-                <span className="text-blue-400">XP: {xp}/{nextLevelXp}</span>
-                <span className="text-blue-400">{Math.floor((xp / nextLevelXp) * 100)}%</span>
-              </div>
-              <div className="w-full h-1 bg-black/50 rounded-full">
-                <div 
-                  className="h-full bg-blue-400 rounded-full transition-all"
-                  style={{ width: `${(xp / nextLevelXp) * 100}%` }}
-                />
-              </div>
+    <>
+      <Confetti active={showConfetti} />
+      <div className="slot-machine min-h-screen p-4 flex flex-col bg-gradient-to-b from-purple-900/50 to-indigo-900/50">
+        {/* Cabeçalho com informações */}
+        <div className="grid grid-cols-4 gap-3 mb-6">
+          <div className="bg-black/40 p-3 rounded-xl border-2 border-yellow-500/30 shadow-lg backdrop-blur-sm">
+            <div className="flex items-center gap-2">
+              <Coins className="w-6 h-6 text-yellow-500" />
+              <span className="text-yellow-400 text-xl font-bold">{formatCurrency(balance)}</span>
             </div>
+          </div>
+          
+          <div className="bg-black/40 p-3 rounded-xl border-2 border-purple-500/30 shadow-lg backdrop-blur-sm">
+            <div className="flex items-center gap-2">
+              <Star className="w-6 h-6 text-purple-400" />
+              <span className="text-purple-400 text-xl font-bold">Nível {level}</span>
+            </div>
+          </div>
 
-            {/* Multiplicador */}
-            {multiplier === 1 ? (
-              <button
-                onClick={activateMultiplier}
-                disabled={balance < 50 || isSpinning}
-                className="mb-6 px-4 py-2 bg-gradient-to-r from-yellow-600 to-yellow-500 rounded-lg text-black font-bold
-                  shadow-[0_0_10px_rgba(234,179,8,0.3)] hover:shadow-[0_0_15px_rgba(234,179,8,0.5)]
-                  disabled:opacity-50 disabled:cursor-not-allowed transition-all transform hover:scale-105
-                  border-2 border-yellow-400"
-              >
-                <div className="flex items-center gap-2">
-                  <Zap className="w-5 h-5" />
-                  <span>2x (R$50)</span>
+          <div className="bg-black/40 p-3 rounded-xl border-2 border-green-500/30 shadow-lg backdrop-blur-sm">
+            <div className="flex items-center gap-2">
+              <Gift className="w-6 h-6 text-green-400" />
+              <span className="text-green-400 text-xl font-bold">Dia {loginStreak}/7</span>
+            </div>
+          </div>
+
+          <div className="bg-black/40 p-3 rounded-xl border-2 border-pink-500/30 shadow-lg backdrop-blur-sm">
+            <div className="flex items-center justify-between">
+              <span className="text-pink-300 font-bold">Jackpot:</span>
+              <span className="text-pink-400 text-xl font-bold">{formatCurrency(jackpotAmount)}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Área principal */}
+        <div className="flex-1 grid grid-cols-5 gap-6">
+          {/* Área do jogo */}
+          <div className="col-span-3 flex flex-col">
+            <div className="bg-black/40 p-6 rounded-xl border-2 border-indigo-500/30 shadow-lg backdrop-blur-sm flex-1 flex flex-col">
+              {/* XP Bar */}
+              <div className="mb-4">
+                <div className="flex justify-between text-xs mb-1">
+                  <span className="text-blue-400">XP: {xp}/{nextLevelXp}</span>
+                  <span className="text-blue-400">{Math.floor((xp / nextLevelXp) * 100)}%</span>
                 </div>
-              </button>
-            ) : (
-              <div className="text-center mb-6 text-yellow-400 text-xl font-bold flex items-center justify-center gap-2
-                animate-pulse">
-                <Zap className="w-6 h-6" />
-                {multiplier}x ATIVO!
-              </div>
-            )}
-
-            {/* Último ganho */}
-            {lastWin > 0 && (
-              <div className="text-green-400 text-xl animate-bounce mb-4 text-center">
-                +{formatCurrency(lastWin)}
-              </div>
-            )}
-
-            {/* Slots */}
-            <div className="flex justify-center gap-6 mb-8">
-              {reels.map((symbol, index) => (
-                <SlotReel
-                  key={index}
-                  symbols={[...SYMBOLS]}
-                  isSpinning={isSpinning}
-                  currentSymbol={symbol}
-                />
-              ))}
-            </div>
-
-            {/* Controles */}
-            <div className="mt-auto">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-lg text-purple-300 font-bold">Aposta:</span>
-                <span className="text-lg text-yellow-400 font-bold">{formatCurrency(bet)}</span>
-              </div>
-
-              <div className="relative mb-6">
-                <input
-                  type="range"
-                  min="1"
-                  max={Math.min(50, balance)}
-                  step="1"
-                  value={bet}
-                  onChange={handleBetChange}
-                  disabled={isSpinning}
-                  className="w-full h-3 bg-black/60 rounded-lg appearance-none cursor-pointer
-                    disabled:opacity-50 disabled:cursor-not-allowed border border-indigo-500/30
-                    [&::-webkit-slider-thumb]:appearance-none
-                    [&::-webkit-slider-thumb]:w-6
-                    [&::-webkit-slider-thumb]:h-6
-                    [&::-webkit-slider-thumb]:rounded-full
-                    [&::-webkit-slider-thumb]:bg-yellow-500
-                    [&::-webkit-slider-thumb]:border-2
-                    [&::-webkit-slider-thumb]:border-yellow-600
-                    [&::-webkit-slider-thumb]:shadow-lg
-                    [&::-webkit-slider-thumb]:hover:bg-yellow-400
-                    [&::-webkit-slider-thumb]:transition-colors"
-                />
-                <div className="flex justify-between mt-2 text-sm text-gray-400 font-bold">
-                  <span>R$1</span>
-                  <span>R$25</span>
-                  <span>R${Math.min(50, balance)}</span>
+                <div className="w-full h-1 bg-black/50 rounded-full">
+                  <div 
+                    className="h-full bg-blue-400 rounded-full transition-all"
+                    style={{ width: `${(xp / nextLevelXp) * 100}%` }}
+                  />
                 </div>
               </div>
 
-              {/* Botão de Spin */}
-              <button
-                onClick={spin}
-                disabled={isSpinning || balance < bet}
-                className="w-full py-6 bg-gradient-to-r from-yellow-600 to-yellow-500 rounded-xl
-                  text-black text-2xl font-black uppercase tracking-wider
-                  shadow-[0_0_20px_rgba(234,179,8,0.3)] hover:shadow-[0_0_30px_rgba(234,179,8,0.5)]
-                  disabled:opacity-50 disabled:cursor-not-allowed transition-all transform hover:scale-105
-                  border-4 border-yellow-400 disabled:hover:scale-100"
-              >
-                {isSpinning ? 'GIRANDO...' : 'GIRAR!'}
-              </button>
+              {/* Multiplicador */}
+              {multiplier === 1 ? (
+                <button
+                  onClick={activateMultiplier}
+                  disabled={balance < 50 || isSpinning}
+                  className="mb-6 px-4 py-2 bg-gradient-to-r from-yellow-600 to-yellow-500 rounded-lg text-black font-bold
+                    shadow-[0_0_10px_rgba(234,179,8,0.3)] hover:shadow-[0_0_15px_rgba(234,179,8,0.5)]
+                    disabled:opacity-50 disabled:cursor-not-allowed transition-all transform hover:scale-105
+                    border-2 border-yellow-400"
+                >
+                  <div className="flex items-center gap-2">
+                    <Zap className="w-5 h-5" />
+                    <span>2x (R$50)</span>
+                  </div>
+                </button>
+              ) : (
+                <div className="text-center mb-6 text-yellow-400 text-xl font-bold flex items-center justify-center gap-2
+                  animate-pulse">
+                  <Zap className="w-6 h-6" />
+                  {multiplier}x ATIVO!
+                </div>
+              )}
+
+              {/* Último ganho */}
+              {lastWin > 0 && (
+                <div className="text-green-400 text-xl animate-bounce mb-4 text-center">
+                  +{formatCurrency(lastWin)}
+                </div>
+              )}
+
+              {/* Slots */}
+              <div className="flex justify-center gap-6 mb-8">
+                {reels.map((symbol, index) => (
+                  <SlotReel
+                    key={index}
+                    symbols={[...SYMBOLS]}
+                    isSpinning={isSpinning}
+                    currentSymbol={symbol}
+                  />
+                ))}
+              </div>
+
+              {/* Controles */}
+              <div className="mt-auto">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-lg text-purple-300 font-bold">Aposta:</span>
+                  <span className="text-lg text-yellow-400 font-bold">{formatCurrency(bet)}</span>
+                </div>
+
+                <div className="relative mb-6">
+                  <input
+                    type="range"
+                    min="1"
+                    max={Math.min(50, balance)}
+                    step="1"
+                    value={bet}
+                    onChange={handleBetChange}
+                    disabled={isSpinning}
+                    className="w-full h-3 bg-black/60 rounded-lg appearance-none cursor-pointer
+                      disabled:opacity-50 disabled:cursor-not-allowed border border-indigo-500/30
+                      [&::-webkit-slider-thumb]:appearance-none
+                      [&::-webkit-slider-thumb]:w-6
+                      [&::-webkit-slider-thumb]:h-6
+                      [&::-webkit-slider-thumb]:rounded-full
+                      [&::-webkit-slider-thumb]:bg-yellow-500
+                      [&::-webkit-slider-thumb]:border-2
+                      [&::-webkit-slider-thumb]:border-yellow-600
+                      [&::-webkit-slider-thumb]:shadow-lg
+                      [&::-webkit-slider-thumb]:hover:bg-yellow-400
+                      [&::-webkit-slider-thumb]:transition-colors"
+                  />
+                  <div className="flex justify-between mt-2 text-sm text-gray-400 font-bold">
+                    <span>R$1</span>
+                    <span>R$25</span>
+                    <span>R${Math.min(50, balance)}</span>
+                  </div>
+                </div>
+
+                {/* Botão de Spin */}
+                <button
+                  onClick={spin}
+                  disabled={isSpinning || balance < bet}
+                  className="w-full py-6 bg-gradient-to-r from-yellow-600 to-yellow-500 rounded-xl
+                    text-black text-2xl font-black uppercase tracking-wider
+                    shadow-[0_0_20px_rgba(234,179,8,0.3)] hover:shadow-[0_0_30px_rgba(234,179,8,0.5)]
+                    disabled:opacity-50 disabled:cursor-not-allowed transition-all transform hover:scale-105
+                    border-4 border-yellow-400 disabled:hover:scale-100"
+                >
+                  {isSpinning ? 'GIRANDO...' : 'GIRAR!'}
+                </button>
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Coluna da direita - Histórico e Prêmios */}
-        <div className="col-span-2 grid grid-rows-2 gap-4 h-full">
-          {/* Histórico */}
-          <div className="bg-black/30 p-4 rounded-lg overflow-hidden">
-            <h3 className="text-purple-300 text-sm mb-2 flex items-center gap-2">
-              <Trophy className="w-4 h-4" />
-              Histórico
-            </h3>
-            <div className="h-[calc(100%-2rem)] overflow-y-auto custom-scrollbar">
-              <WinHistory history={winHistory} />
+          {/* Coluna da direita - Histórico e Prêmios */}
+          <div className="col-span-2 grid grid-rows-2 gap-4 h-full">
+            {/* Histórico */}
+            <div className="bg-black/30 p-4 rounded-lg overflow-hidden">
+              <h3 className="text-purple-300 text-sm mb-2 flex items-center gap-2">
+                <Trophy className="w-4 h-4" />
+                Histórico
+              </h3>
+              <div className="h-[calc(100%-2rem)] overflow-y-auto custom-scrollbar">
+                <WinHistory history={winHistory} />
+              </div>
             </div>
-          </div>
 
-          {/* Tabela de Prêmios */}
-          <div className="bg-black/30 p-4 rounded-lg overflow-hidden">
-            <h3 className="text-purple-300 text-sm mb-2">Prêmios</h3>
-            <div className="h-[calc(100%-2rem)] overflow-y-auto custom-scrollbar text-xs">
-              {prizeTable}
+            {/* Tabela de Prêmios */}
+            <div className="bg-black/30 p-4 rounded-lg overflow-hidden">
+              <h3 className="text-purple-300 text-sm mb-2">Prêmios</h3>
+              <div className="h-[calc(100%-2rem)] overflow-y-auto custom-scrollbar text-xs">
+                {prizeTable}
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
+    </>
   );
 };
 
