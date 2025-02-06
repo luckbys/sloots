@@ -2,23 +2,24 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { toast } from 'sonner';
 import { nanoid } from 'nanoid';
 import SlotReel from './SlotReel';
-import { Coins, ChevronUp, ChevronDown, Crown, Diamond, Star, Gift, Zap, TrendingUp } from 'lucide-react';
+import { Coins, ChevronUp, ChevronDown, Crown, Diamond, Star, Gift, Zap, TrendingUp, Trophy } from 'lucide-react';
 import WinHistory, { WinRecord } from './WinHistory';
+import { formatCurrency } from '../utils/format';
 
 
-const SYMBOLS = ['🍒', '7️⃣', '🎰', '💎', '🌟', '🍋', '��', '🃏'] as const;
-const INITIAL_BALANCE = 1000;
+const SYMBOLS = ['🍒', '7️⃣', '🎰', '💎', '🌟', '🍋', '👑', '🃏'] as const;
+const INITIAL_BALANCE = 100; // R$100 inicial
 const SPIN_DURATION = 2000;
 
 const PRIZES = {
-  '7️⃣': 20,    // Jackpot
-  '💎': 15,    // Premium
-  '👑': 12,    // Alto
-  '🌟': 10,    // Médio-alto
-  '🎰': 8,     // Médio
-  '🍒': 6,     // Médio-baixo
-  '🍋': 4,     // Baixo
-  '🃏': 2,     // Curinga - pode substituir qualquer símbolo
+  '7️⃣': 50,    // Jackpot
+  '💎': 30,    // Premium
+  '👑': 20,    // Alto
+  '🌟': 15,    // Médio-alto
+  '🎰': 10,    // Médio
+  '🍒': 8,     // Médio-baixo
+  '🍋': 5,     // Baixo
+  '🃏': 3,     // Curinga
 } as const;
 
 const AUDIO = {
@@ -38,20 +39,30 @@ const LEVEL_MULTIPLIER = 1.5; // Multiplicador de XP por nível
 
 // Bônus diários
 const DAILY_BONUS = {
-  1: 100,    // Dia 1: 100 moedas
-  2: 200,    // Dia 2: 200 moedas
-  3: 300,    // Dia 3: 300 moedas
-  4: 400,    // Dia 4: 400 moedas
-  5: 500,    // Dia 5: 500 moedas
-  6: 750,    // Dia 6: 750 moedas
-  7: 1000,   // Dia 7: 1000 moedas
+  1: 10,     // Dia 1: R$10
+  2: 15,     // Dia 2: R$15
+  3: 20,     // Dia 3: R$20
+  4: 25,     // Dia 4: R$25
+  5: 30,     // Dia 5: R$30
+  6: 40,     // Dia 6: R$40
+  7: 50,     // Dia 7: R$50
 } as const;
+
+// Prevenir erros de áudio
+const playAudio = async (audio: HTMLAudioElement) => {
+  try {
+    audio.currentTime = 0;
+    await audio.play();
+  } catch (error) {
+    console.warn('Erro ao tocar áudio:', error);
+  }
+};
 
 const SlotMachine = () => {
   const [balance, setBalance] = useState(INITIAL_BALANCE);
   const [bet, setBet] = useState(10);
   const [isSpinning, setIsSpinning] = useState(false);
-  const [reels, setReels] = useState(['7️⃣', '7️⃣', '7️⃣']);
+  const [reels, setReels] = useState<string[]>(['7️⃣', '7️⃣', '7️⃣']);
   const [lastWin, setLastWin] = useState(0);
   const [jackpotAmount, setJackpotAmount] = useState(5000);
   const [streak, setStreak] = useState(0);
@@ -72,9 +83,9 @@ const SlotMachine = () => {
     );
   }, []);
 
+  // Melhorar a função de play sound
   const playSound = useCallback((type: keyof typeof AUDIO) => {
-    AUDIO[type].currentTime = 0;
-    AUDIO[type].play().catch(() => {});
+    playAudio(AUDIO[type]);
   }, []);
 
   const maxBet = useMemo(() => Math.min(100, balance), [balance]);
@@ -84,27 +95,135 @@ const SlotMachine = () => {
     return Math.floor(LEVEL_XP_BASE * Math.pow(LEVEL_MULTIPLIER, level - 1));
   }, [level]);
 
-  const spin = useCallback(() => {
-    if (balance < bet) {
-      toast.error("Saldo insuficiente!");
-      return;
+  // Corrigir a função checkWin para evitar cálculos incorretos
+  const checkWin = useCallback((newReels: string[]) => {
+    if (!newReels || newReels.length !== 3) return;
+    
+    let winAmount = 0;
+    let xpGained = 0;
+    let message = '';
+    let isJackpot = false;
+
+    try {
+      const symbolsEqual = newReels.every((symbol, _, arr) => 
+        symbol === arr[0] || isWildcard(symbol) || isWildcard(arr[0])
+      );
+
+      if (symbolsEqual) {
+        const baseSymbol = newReels.find(s => !isWildcard(s)) || newReels[0];
+        const prizeMultiplier = PRIZES[baseSymbol as keyof typeof PRIZES] || 1;
+        
+        const wildcardCount = newReels.filter(isWildcard).length;
+        const wildcardBonus = wildcardCount * 0.5;
+        
+        winAmount = Math.floor(bet * prizeMultiplier * (1 + wildcardBonus));
+
+        if (newReels.every(s => s === '7️⃣')) {
+          winAmount += jackpotAmount;
+          isJackpot = true;
+          message = `🎉 MEGA JACKPOT! Você ganhou ${formatCurrency(winAmount)}! 🎉`;
+          setJackpotAmount(5000);
+        } else {
+          message = `🎉 Você ganhou ${formatCurrency(winAmount)}! 🎉`;
+        }
+      } 
+      else if (
+        newReels[0] === newReels[1] || 
+        newReels[1] === newReels[2] || 
+        newReels[0] === newReels[2] ||
+        newReels.filter(isWildcard).length >= 1
+      ) {
+        winAmount = Math.floor(bet * 1.5);
+        message = `Você ganhou ${formatCurrency(winAmount)}!`;
+      }
+
+      if (winAmount > 0) {
+        const finalWinAmount = Math.floor(winAmount * multiplier);
+        xpGained = Math.floor(finalWinAmount * 0.1);
+        
+        // Agrupar atualizações de estado
+        setBalance(prev => prev + finalWinAmount);
+        setLastWin(finalWinAmount);
+        setMaxWin(prev => Math.max(prev, finalWinAmount));
+        setStreak(prev => prev + 1);
+        
+        const newXp = xp + xpGained;
+        if (newXp >= nextLevelXp) {
+          const bonusCoins = level * 100;
+          setLevel(prev => prev + 1);
+          setXp(newXp - nextLevelXp);
+          setBalance(prev => prev + bonusCoins);
+          toast.success(`🌟 Level Up! Nível ${level + 1}! Bônus: +${formatCurrency(bonusCoins)}!`);
+        } else {
+          setXp(newXp);
+        }
+
+        // Criar novo registro com ID único
+        const newRecord: WinRecord = {
+          id: nanoid(),
+          amount: finalWinAmount,
+          symbols: [...newReels], // Clone do array para evitar referências
+          timestamp: new Date(),
+          isJackpot
+        };
+        
+        setWinHistory(prev => [newRecord, ...prev].slice(0, 10));
+        playSound(isJackpot ? 'jackpot' : 'win');
+        
+        toast.success(message, {
+          duration: isJackpot ? 5000 : 2000,
+        });
+
+        // Atualizar multiplicador se necessário
+        if (multiplier > 1) {
+          setMultiplier(prev => {
+            if (prev === 2) {
+              toast.info('Multiplicador 2x terminou!');
+              return 1;
+            }
+            return prev;
+          });
+        }
+      } else {
+        setStreak(0);
+      }
+    } catch (error) {
+      console.error('Erro ao verificar vitória:', error);
+      toast.error('Ocorreu um erro ao verificar o resultado');
     }
-    if (isSpinning) return;
+  }, [bet, multiplier, xp, level, nextLevelXp, jackpotAmount, isWildcard, playSound]);
 
-    playSound('spin');
-    setIsSpinning(true);
-    setBalance(prev => prev - bet);
-    setLastWin(0);
+  // Melhorar a função spin
+  const spin = useCallback(() => {
+    try {
+      if (balance < bet) {
+        toast.error("Saldo insuficiente!");
+        return;
+      }
+      if (isSpinning) return;
 
-    requestAnimationFrame(() => {
+      // Deduzir a aposta imediatamente
+      setBalance(prev => prev - bet);
+      setLastWin(0);
+      setIsSpinning(true);
+
+      // Gerar novos símbolos
+      const newReels = Array.from({ length: 3 }, () => 
+        SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)]
+      );
+
+      // Simular a animação
       setTimeout(() => {
-        const newReels = generateNewReels();
         setReels(newReels);
         setIsSpinning(false);
         checkWin(newReels);
       }, SPIN_DURATION);
-    });
-  }, [balance, bet, isSpinning, generateNewReels, playSound]);
+    } catch (error) {
+      console.error('Erro ao girar:', error);
+      setIsSpinning(false);
+      toast.error('Ocorreu um erro ao girar');
+    }
+  }, [balance, bet, isSpinning]);
 
   // Verificar bônus diário
   useEffect(() => {
@@ -124,13 +243,13 @@ const SlotMachine = () => {
         
         const bonus = DAILY_BONUS[newStreak as keyof typeof DAILY_BONUS];
         setBalance(prev => prev + bonus);
-        toast.success(`🎁 Bônus diário: +${bonus} moedas! (Dia ${newStreak})`);
+        toast.success(`🎁 Bônus diário: +${formatCurrency(bonus)}! (Dia ${newStreak})`);
       } else {
         // Quebrou a sequência
         setLoginStreak(1);
         localStorage.setItem('loginStreak', '1');
         setBalance(prev => prev + DAILY_BONUS[1]);
-        toast.success(`🎁 Bônus diário: +${DAILY_BONUS[1]} moedas!`);
+        toast.success(`🎁 Bônus diário: +${formatCurrency(DAILY_BONUS[1])}!`);
       }
 
       localStorage.setItem('lastLoginDate', today);
@@ -140,8 +259,8 @@ const SlotMachine = () => {
 
   // Sistema de multiplicador temporário
   const activateMultiplier = useCallback(() => {
-    if (balance >= 500) {
-      setBalance(prev => prev - 500);
+    if (balance >= 50) { // Custo do multiplicador ajustado para R$50
+      setBalance(prev => prev - 50);
       setMultiplier(2);
       toast.success('🔥 Multiplicador 2x ativado por 5 jogadas!');
     } else {
@@ -149,125 +268,11 @@ const SlotMachine = () => {
     }
   }, [balance]);
 
-  const checkWin = useCallback((newReels: string[]) => {
-    let winAmount = 0;
-    let xpGained = 0;
-    let message = '';
-    let isJackpot = false;
-
-    const symbolsEqual = newReels.every((symbol, _, arr) => 
-      symbol === arr[0] || isWildcard(symbol) || isWildcard(arr[0])
-    );
-
-    if (symbolsEqual) {
-      const baseSymbol = newReels.find(s => !isWildcard(s)) || newReels[0];
-      const multiplier = PRIZES[baseSymbol as keyof typeof PRIZES];
-      
-      const wildcardCount = newReels.filter(isWildcard).length;
-      const wildcardBonus = wildcardCount * 0.5;
-      
-      winAmount = bet * multiplier * (1 + wildcardBonus);
-
-      if (newReels.every(s => s === '7️⃣')) {
-        winAmount += jackpotAmount;
-        isJackpot = true;
-        message = `🎉 MEGA JACKPOT! Você ganhou ${winAmount} moedas! 🎉`;
-        setJackpotAmount(5000);
-      } else {
-        message = `🎉 Você ganhou ${winAmount} moedas! 🎉`;
-      }
-    } 
-    else if (
-      newReels[0] === newReels[1] || 
-      newReels[1] === newReels[2] || 
-      newReels[0] === newReels[2] ||
-      newReels.filter(isWildcard).length >= 1
-    ) {
-      winAmount = Math.floor(bet * 1.5);
-      message = `Você ganhou ${winAmount} moedas!`;
-    }
-
-    if (winAmount > 0) {
-      // Aplicar multiplicador ao prêmio
-      const finalWinAmount = Math.floor(winAmount * multiplier);
-      
-      // Calcular XP ganho
-      xpGained = Math.floor(finalWinAmount * 0.1); // 10% do prêmio em XP
-      
-      requestAnimationFrame(() => {
-        setBalance(prev => prev + finalWinAmount);
-        setLastWin(finalWinAmount);
-        setMaxWin(prev => Math.max(prev, finalWinAmount));
-        setStreak(prev => prev + 1);
-        
-        // Atualizar XP e verificar level up
-        const newXp = xp + xpGained;
-        if (newXp >= nextLevelXp) {
-          const bonusCoins = level * 100;
-          setLevel(prev => prev + 1);
-          setXp(newXp - nextLevelXp);
-          setBalance(prev => prev + bonusCoins);
-          toast.success(`🌟 Level Up! Nível ${level + 1}! Bônus: +${bonusCoins} moedas!`);
-        } else {
-          setXp(newXp);
-        }
-
-        const newRecord: WinRecord = {
-          id: nanoid(),
-          amount: finalWinAmount,
-          symbols: newReels,
-          timestamp: new Date(),
-          isJackpot
-        };
-        
-        setWinHistory(prev => [newRecord, ...prev].slice(0, 10));
-        
-        playSound(isJackpot ? 'jackpot' : 'win');
-
-        toast.success(message, {
-          duration: isJackpot ? 5000 : 2000,
-        });
-
-        // Reduzir contador do multiplicador
-        if (multiplier > 1) {
-          setMultiplier(prev => {
-            if (prev === 2) {
-              toast.info('Multiplicador 2x terminou!');
-              return 1;
-            }
-            return prev;
-          });
-        }
-      });
-    } else {
-      setStreak(0);
-    }
-  }, [multiplier, xp, level, nextLevelXp]);
-
-  useEffect(() => {
-    let rafId: number;
-    let lastUpdate = Date.now();
-
-    const updateJackpot = () => {
-      const now = Date.now();
-      const delta = now - lastUpdate;
-      
-      if (delta >= 1000) {
-        setJackpotAmount(prev => prev + 1);
-        lastUpdate = now;
-      }
-      
-      rafId = requestAnimationFrame(updateJackpot);
-    };
-
-    rafId = requestAnimationFrame(updateJackpot);
-    return () => cancelAnimationFrame(rafId);
-  }, []);
-
   const handleBetChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const newBet = parseInt(event.target.value);
-    if (newBet <= balance) {
+    if (newBet <= balance && newBet >= 1) {
       setBet(newBet);
+      playSound('click');
     }
   };
 
@@ -293,151 +298,194 @@ const SlotMachine = () => {
     </div>
   ), []);
 
+  useEffect(() => {
+    let spinTimeout: NodeJS.Timeout;
+
+    const handleSpin = () => {
+      if (isSpinning) {
+        spinTimeout = setTimeout(() => {
+          setIsSpinning(false);
+        }, SPIN_DURATION);
+      }
+    };
+
+    handleSpin();
+
+    return () => {
+      if (spinTimeout) {
+        clearTimeout(spinTimeout);
+      }
+    };
+  }, [isSpinning]);
+
   return (
-    <div className="slot-machine p-8 rounded-xl max-w-[800px] mx-auto backdrop-blur-sm">
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        <div className="flex items-center gap-3 bg-black/30 p-3 rounded-lg">
-          <Coins className="w-6 h-6 text-yellow-400" />
-          <span className="text-yellow-400 text-xl">{balance}</span>
+    <div className="slot-machine min-h-screen p-4 flex flex-col bg-gradient-to-b from-purple-900/50 to-indigo-900/50">
+      {/* Cabeçalho com informações */}
+      <div className="grid grid-cols-4 gap-3 mb-6">
+        <div className="bg-black/40 p-3 rounded-xl border-2 border-yellow-500/30 shadow-lg backdrop-blur-sm">
+          <div className="flex items-center gap-2">
+            <Coins className="w-6 h-6 text-yellow-500" />
+            <span className="text-yellow-400 text-xl font-bold">{formatCurrency(balance)}</span>
+          </div>
         </div>
-        <div className="flex items-center gap-3 bg-black/30 p-3 rounded-lg">
-          <Star className="w-6 h-6 text-purple-400" />
-          <span className="text-purple-400 text-xl">Nível {level}</span>
+        
+        <div className="bg-black/40 p-3 rounded-xl border-2 border-purple-500/30 shadow-lg backdrop-blur-sm">
+          <div className="flex items-center gap-2">
+            <Star className="w-6 h-6 text-purple-400" />
+            <span className="text-purple-400 text-xl font-bold">Nível {level}</span>
+          </div>
         </div>
-        <div className="flex items-center gap-3 bg-black/30 p-3 rounded-lg">
-          <TrendingUp className="w-6 h-6 text-blue-400" />
-          <div className="flex flex-col">
-            <span className="text-blue-400 text-sm">XP: {xp}/{nextLevelXp}</span>
-            <div className="w-full h-2 bg-black/50 rounded-full">
-              <div 
-                className="h-full bg-blue-400 rounded-full transition-all"
-                style={{ width: `${(xp / nextLevelXp) * 100}%` }}
-              />
+
+        <div className="bg-black/40 p-3 rounded-xl border-2 border-green-500/30 shadow-lg backdrop-blur-sm">
+          <div className="flex items-center gap-2">
+            <Gift className="w-6 h-6 text-green-400" />
+            <span className="text-green-400 text-xl font-bold">Dia {loginStreak}/7</span>
+          </div>
+        </div>
+
+        <div className="bg-black/40 p-3 rounded-xl border-2 border-pink-500/30 shadow-lg backdrop-blur-sm">
+          <div className="flex items-center justify-between">
+            <span className="text-pink-300 font-bold">Jackpot:</span>
+            <span className="text-pink-400 text-xl font-bold">{formatCurrency(jackpotAmount)}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Área principal */}
+      <div className="flex-1 grid grid-cols-5 gap-6">
+        {/* Área do jogo */}
+        <div className="col-span-3 flex flex-col">
+          <div className="bg-black/40 p-6 rounded-xl border-2 border-indigo-500/30 shadow-lg backdrop-blur-sm flex-1 flex flex-col">
+            {/* XP Bar */}
+            <div className="mb-4">
+              <div className="flex justify-between text-xs mb-1">
+                <span className="text-blue-400">XP: {xp}/{nextLevelXp}</span>
+                <span className="text-blue-400">{Math.floor((xp / nextLevelXp) * 100)}%</span>
+              </div>
+              <div className="w-full h-1 bg-black/50 rounded-full">
+                <div 
+                  className="h-full bg-blue-400 rounded-full transition-all"
+                  style={{ width: `${(xp / nextLevelXp) * 100}%` }}
+                />
+              </div>
+            </div>
+
+            {/* Multiplicador */}
+            {multiplier === 1 ? (
+              <button
+                onClick={activateMultiplier}
+                disabled={balance < 50 || isSpinning}
+                className="mb-6 px-4 py-2 bg-gradient-to-r from-yellow-600 to-yellow-500 rounded-lg text-black font-bold
+                  shadow-[0_0_10px_rgba(234,179,8,0.3)] hover:shadow-[0_0_15px_rgba(234,179,8,0.5)]
+                  disabled:opacity-50 disabled:cursor-not-allowed transition-all transform hover:scale-105
+                  border-2 border-yellow-400"
+              >
+                <div className="flex items-center gap-2">
+                  <Zap className="w-5 h-5" />
+                  <span>2x (R$50)</span>
+                </div>
+              </button>
+            ) : (
+              <div className="text-center mb-6 text-yellow-400 text-xl font-bold flex items-center justify-center gap-2
+                animate-pulse">
+                <Zap className="w-6 h-6" />
+                {multiplier}x ATIVO!
+              </div>
+            )}
+
+            {/* Último ganho */}
+            {lastWin > 0 && (
+              <div className="text-green-400 text-xl animate-bounce mb-4 text-center">
+                +{formatCurrency(lastWin)}
+              </div>
+            )}
+
+            {/* Slots */}
+            <div className="flex justify-center gap-6 mb-8">
+              {reels.map((symbol, index) => (
+                <SlotReel
+                  key={index}
+                  symbols={[...SYMBOLS]}
+                  isSpinning={isSpinning}
+                  currentSymbol={symbol}
+                />
+              ))}
+            </div>
+
+            {/* Controles */}
+            <div className="mt-auto">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-lg text-purple-300 font-bold">Aposta:</span>
+                <span className="text-lg text-yellow-400 font-bold">{formatCurrency(bet)}</span>
+              </div>
+
+              <div className="relative mb-6">
+                <input
+                  type="range"
+                  min="1"
+                  max={Math.min(50, balance)}
+                  step="1"
+                  value={bet}
+                  onChange={handleBetChange}
+                  disabled={isSpinning}
+                  className="w-full h-3 bg-black/60 rounded-lg appearance-none cursor-pointer
+                    disabled:opacity-50 disabled:cursor-not-allowed border border-indigo-500/30
+                    [&::-webkit-slider-thumb]:appearance-none
+                    [&::-webkit-slider-thumb]:w-6
+                    [&::-webkit-slider-thumb]:h-6
+                    [&::-webkit-slider-thumb]:rounded-full
+                    [&::-webkit-slider-thumb]:bg-yellow-500
+                    [&::-webkit-slider-thumb]:border-2
+                    [&::-webkit-slider-thumb]:border-yellow-600
+                    [&::-webkit-slider-thumb]:shadow-lg
+                    [&::-webkit-slider-thumb]:hover:bg-yellow-400
+                    [&::-webkit-slider-thumb]:transition-colors"
+                />
+                <div className="flex justify-between mt-2 text-sm text-gray-400 font-bold">
+                  <span>R$1</span>
+                  <span>R$25</span>
+                  <span>R${Math.min(50, balance)}</span>
+                </div>
+              </div>
+
+              {/* Botão de Spin */}
+              <button
+                onClick={spin}
+                disabled={isSpinning || balance < bet}
+                className="w-full py-6 bg-gradient-to-r from-yellow-600 to-yellow-500 rounded-xl
+                  text-black text-2xl font-black uppercase tracking-wider
+                  shadow-[0_0_20px_rgba(234,179,8,0.3)] hover:shadow-[0_0_30px_rgba(234,179,8,0.5)]
+                  disabled:opacity-50 disabled:cursor-not-allowed transition-all transform hover:scale-105
+                  border-4 border-yellow-400 disabled:hover:scale-100"
+              >
+                {isSpinning ? 'GIRANDO...' : 'GIRAR!'}
+              </button>
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-3 bg-black/30 p-3 rounded-lg">
-          <Gift className="w-6 h-6 text-green-400" />
-          <span className="text-green-400 text-xl">Dia {loginStreak}/7</span>
-        </div>
-      </div>
 
-      {multiplier === 1 && (
-        <button
-          onClick={activateMultiplier}
-          disabled={balance < 500 || isSpinning}
-          className="mb-4 px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 rounded-lg text-white flex items-center gap-2 mx-auto hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          <Zap className="w-5 h-5" />
-          Ativar 2x (500 moedas)
-        </button>
-      )}
+        {/* Coluna da direita - Histórico e Prêmios */}
+        <div className="col-span-2 grid grid-rows-2 gap-4 h-full">
+          {/* Histórico */}
+          <div className="bg-black/30 p-4 rounded-lg overflow-hidden">
+            <h3 className="text-purple-300 text-sm mb-2 flex items-center gap-2">
+              <Trophy className="w-4 h-4" />
+              Histórico
+            </h3>
+            <div className="h-[calc(100%-2rem)] overflow-y-auto custom-scrollbar">
+              <WinHistory history={winHistory} />
+            </div>
+          </div>
 
-      {multiplier > 1 && (
-        <div className="text-center mb-4 text-yellow-400 flex items-center justify-center gap-2">
-          <Zap className="w-5 h-5" />
-          Multiplicador {multiplier}x ativo!
-        </div>
-      )}
-
-      <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center gap-3 bg-black/30 p-3 rounded-lg">
-          <Diamond className="w-6 h-6 text-purple-400" />
-          <span className="text-purple-400 text-xl">{bet}</span>
-        </div>
-      </div>
-      
-      {lastWin > 0 && (
-        <div className="text-green-400 text-2xl animate-bounce mb-6 flex items-center justify-center gap-2">
-          <Crown className="w-6 h-6" />
-          <span>+{lastWin}</span>
-        </div>
-      )}
-      
-      <div className="flex justify-center mb-8 gap-6">
-        {reels.map((symbol, index) => (
-          <SlotReel
-            key={index}
-            symbols={SYMBOLS}
-            isSpinning={isSpinning}
-            currentSymbol={symbol}
-          />
-        ))}
-      </div>
-
-      <div className="mb-6 bg-black/30 p-4 rounded-lg">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-purple-300">Valor da Aposta</span>
-          <span className="text-yellow-400 font-bold">{bet} moedas</span>
-        </div>
-        
-        <div className="relative">
-          <input
-            type="range"
-            min="10"
-            max={maxBet}
-            step="10"
-            value={bet}
-            onChange={handleBetChange}
-            disabled={isSpinning}
-            className="w-full h-2 bg-indigo-900 rounded-lg appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed
-              [&::-webkit-slider-thumb]:appearance-none
-              [&::-webkit-slider-thumb]:w-6
-              [&::-webkit-slider-thumb]:h-6
-              [&::-webkit-slider-thumb]:rounded-full
-              [&::-webkit-slider-thumb]:bg-indigo-600
-              [&::-webkit-slider-thumb]:hover:bg-indigo-700
-              [&::-webkit-slider-thumb]:transition-colors
-              [&::-moz-range-thumb]:w-6
-              [&::-moz-range-thumb]:h-6
-              [&::-moz-range-thumb]:rounded-full
-              [&::-moz-range-thumb]:bg-indigo-600
-              [&::-moz-range-thumb]:hover:bg-indigo-700
-              [&::-moz-range-thumb]:border-0
-              [&::-moz-range-thumb]:transition-colors"
-          />
-          
-          <div className="flex justify-between mt-1 text-xs text-gray-400">
-            <span>10</span>
-            <span>50</span>
-            <span>{maxBet}</span>
+          {/* Tabela de Prêmios */}
+          <div className="bg-black/30 p-4 rounded-lg overflow-hidden">
+            <h3 className="text-purple-300 text-sm mb-2">Prêmios</h3>
+            <div className="h-[calc(100%-2rem)] overflow-y-auto custom-scrollbar text-xs">
+              {prizeTable}
+            </div>
           </div>
         </div>
       </div>
-
-      <div className="grid grid-cols-2 gap-4 mb-8">
-        <div className="flex items-center gap-3 bg-black/30 p-3 rounded-lg">
-          <span className="text-purple-300">Jackpot:</span>
-          <span className="text-yellow-400 text-xl">{jackpotAmount}</span>
-        </div>
-        <div className="flex items-center gap-3 bg-black/30 p-3 rounded-lg">
-          <span className="text-purple-300">Sequência:</span>
-          <span className="text-yellow-400 text-xl">{streak}x</span>
-        </div>
-      </div>
-
-      <button
-        onClick={spin}
-        disabled={isSpinning || balance < bet}
-        className="spin-button w-full py-6 text-white rounded-lg text-2xl disabled:opacity-50 disabled:cursor-not-allowed font-bold tracking-wider"
-      >
-        {isSpinning ? 'SPINNING...' : 'SPIN!'}
-      </button>
-
-      <div className="grid md:grid-cols-2 gap-4 mt-8">
-        <div className="mt-8 bg-black/30 p-4 rounded-lg">
-          <h3 className="text-center text-xl mb-4 text-purple-300">Tabela de Prêmios</h3>
-          {prizeTable}
-        </div>
-
-        <WinHistory history={winHistory} />
-      </div>
-
-      {maxWin > 0 && (
-        <div className="mt-4 text-center text-sm text-purple-300">
-          Maior prêmio: {maxWin} moedas
-        </div>
-      )}
     </div>
   );
 };

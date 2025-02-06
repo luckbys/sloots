@@ -1,5 +1,6 @@
 import { FC, memo } from 'react';
 import { Trophy, Clock } from 'lucide-react';
+import { formatCurrency } from '../utils/format';
 
 export interface WinRecord {
   id: string;
@@ -15,18 +16,18 @@ interface WinHistoryProps {
 
 const WinRecordItem = memo(({ record }: { record: WinRecord }) => (
   <div
-    className={`flex items-center justify-between p-2 rounded ${
+    className={`flex items-center justify-between p-1.5 rounded text-sm ${
       record.isJackpot ? 'bg-purple-900/30' : 'bg-black/20'
     }`}
   >
-    <div className="flex items-center gap-2">
-      <div className="flex gap-1">
+    <div className="flex items-center gap-1">
+      <div className="flex">
         {record.symbols.map((symbol, idx) => (
           <span key={idx}>{symbol}</span>
         ))}
       </div>
-      <span className={`${record.isJackpot ? 'text-yellow-400' : 'text-green-400'}`}>
-        +{record.amount}
+      <span className={`${record.isJackpot ? 'text-yellow-400' : 'text-green-400'} text-xs`}>
+        +{formatCurrency(record.amount)}
       </span>
     </div>
     <div className="flex items-center gap-1 text-xs text-gray-400">
