@@ -4,10 +4,11 @@ import AdminPanel from '../components/admin/AdminPanel';
 import UserManagement from '../components/admin/UserManagement';
 import TransactionManagement from '../components/admin/TransactionManagement';
 import RewardManagement from '../components/admin/RewardManagement';
-import { Users, Activity, Settings, DollarSign, Gift, BarChart2 } from 'lucide-react';
+import GameSettingsPanel from '../components/admin/GameSettings';
+import { Users, Activity, Settings, DollarSign, Gift, BarChart2, Gamepad2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
-type TabType = 'dashboard' | 'users' | 'transactions' | 'rewards' | 'settings';
+type TabType = 'dashboard' | 'users' | 'transactions' | 'rewards' | 'settings' | 'game';
 
 const Admin: FC = () => {
   const { isLoading, isAdmin } = useProtectedRoute(true);
@@ -41,6 +42,8 @@ const Admin: FC = () => {
         return <TransactionManagement />;
       case 'rewards':
         return <RewardManagement />;
+      case 'game':
+        return <GameSettingsPanel />;
       case 'settings':
         return <div>Configurações em desenvolvimento...</div>;
       default:
@@ -78,6 +81,12 @@ const Admin: FC = () => {
             onClick={() => setActiveTab('rewards')}
             icon={<Gift />}
             label="Recompensas"
+          />
+          <TabButton
+            active={activeTab === 'game'}
+            onClick={() => setActiveTab('game')}
+            icon={<Gamepad2 />}
+            label="Configurações do Jogo"
           />
           <TabButton
             active={activeTab === 'settings'}
