@@ -1,5 +1,17 @@
-import { FC } from 'react';
+import { FC, useState } from 'react';
+import { motion } from 'framer-motion';
 import { Play, Pause, Settings } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Progress } from '@/components/ui/progress';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 
 interface AutoplayControlsProps {
   isActive: boolean;
@@ -10,71 +22,90 @@ interface AutoplayControlsProps {
   disabled?: boolean;
 }
 
-const SPIN_OPTIONS = [10, 25, 50, 100];
-
 const AutoplayControls: FC<AutoplayControlsProps> = ({
   isActive,
   remainingSpins,
   totalSpins,
   onStart,
   onStop,
-  disabled
+  disabled = false
 }) => {
-  return (
-    <div className="flex flex-col gap-2">
-      {/* Botão principal */}
-      {isActive ? (
-        <button
-          onClick={onStop}
-          className="flex items-center justify-center gap-2 px-4 py-2 
-            bg-gradient-to-r from-red-600 to-red-500 rounded-lg text-white 
-            font-bold shadow-lg hover:shadow-xl transition-all transform 
-            hover:scale-105 border-2 border-red-400"
-        >
-          <Pause className="w-4 h-4" />
-          <span>Parar ({remainingSpins}/{totalSpins})</span>
-        </button>
-      ) : (
-        <div className="flex flex-wrap gap-2">
-          {SPIN_OPTIONS.map(spins => (
-            <button
-              key={spins}
-              onClick={() => onStart(spins)}
-              disabled={disabled}
-              className="flex items-center gap-2 px-3 py-2 
-                bg-gradient-to-r from-green-600 to-green-500 rounded-lg 
-                text-white font-bold shadow-lg hover:shadow-xl transition-all 
-                transform hover:scale-105 border-2 border-green-400
-                disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <Play className="w-4 h-4" />
-              <span>{spins}x</span>
-            </button>
-          ))}
-        </div>
-      )}
+  const [spins, setSpins] = useState(50);
+  const progress = ((totalSpins - remainingSpins) / totalSpins) * 100;
 
-      {/* Configurações de Autoplay */}
-      <div className="bg-black/30 p-3 rounded-lg">
-        <div className="flex items-center gap-2 text-sm text-gray-300 mb-2">
-          <Settings className="w-4 h-4" />
-          <span>Parar Autoplay se:</span>
-        </div>
-        <div className="space-y-2 text-sm">
-          <label className="flex items-center gap-2">
-            <input type="checkbox" className="rounded" defaultChecked />
-            <span>Ganhar um Jackpot</span>
-          </label>
-          <label className="flex items-center gap-2">
-            <input type="checkbox" className="rounded" defaultChecked />
-            <span>Saldo abaixo da aposta</span>
-          </label>
-          <label className="flex items-center gap-2">
-            <input type="checkbox" className="rounded" defaultChecked />
-            <span>Ganho maior que R$100</span>
-          </label>
-        </div>
-      </div>
+  return (
+    <div className="w-full max-w-xs space-y-2">
+      <Dialog>
+        <DialogTrigger asChild>
+          <Button
+            variant="outline"
+            className="w-full"
+            disabled={disabled || isActive}
+          >
+            <Settings className="w-4 h-4 mr-2" />
+            Configurar Autoplay
+          </Button>
+        </DialogTrigger>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Configurações de Autoplay</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Número de Rodadas</Label>
+              <Input
+                type="number"
+                value={spins}
+                onChange={(e) => setSpins(Number(e.target.value))}
+                min={1}
+                max={100}
+              />
+            </div>
+            <div className="grid grid-cols-4 gap-2">
+              {[10, 25, 50, 100].map(value => (
+                <Button
+                  key={value}
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setSpins(value)}
+                >
+                  {value}
+                </Button>
+              ))}
+            </div>
+            <Button
+              className="w-full"
+              onClick={() => onStart(spins)}
+              disabled={spins < 1}
+            >
+              Iniciar Autoplay
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {isActive && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 20 }}
+          className="space-y-2"
+        >
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-gray-400">Rodadas Restantes</span>
+            <span>{remainingSpins}/{totalSpins}</span>
+          </div>
+          <Progress value={progress} className="h-2" />
+          <Button
+            variant="destructive"
+            className="w-full"
+            onClick={onStop}
+          >
+            <Pause className="w-4 h-4 mr-2" />
+            Parar Autoplay
+          </Button>
+        </motion.div>
+      )}
     </div>
   );
 };

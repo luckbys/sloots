@@ -1,41 +1,331 @@
 @keyframes slot-spin {
   0% { transform: translateY(0); }
+  25% { transform: translateY(-25%); }
+  50% { transform: translateY(-50%); }
+  75% { transform: translateY(-75%); }
   100% { transform: translateY(-100%); }
 }
 
 @keyframes win-pulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.05); }
+  0% { transform: scale(1); filter: brightness(1); }
+  50% { transform: scale(1.05); filter: brightness(1.2); }
+  100% { transform: scale(1); filter: brightness(1); }
 }
 
 @keyframes confetti {
-  0% { transform: translateY(0) rotate(0deg); opacity: 1; }
-  100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+  0% { 
+    transform: translateY(0) rotate(0deg) scale(1);
+    opacity: 1;
+  }
+  25% {
+    transform: translateY(25vh) rotate(180deg) scale(1.1);
+    opacity: 0.8;
+  }
+  50% {
+    transform: translateY(50vh) rotate(360deg) scale(1);
+    opacity: 0.6;
+  }
+  75% {
+    transform: translateY(75vh) rotate(540deg) scale(0.9);
+    opacity: 0.4;
+  }
+  100% { 
+    transform: translateY(100vh) rotate(720deg) scale(0.8);
+    opacity: 0;
+  }
 }
 
 @keyframes neon-flicker {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.8; }
+  0%, 100% { 
+    opacity: 1;
+    text-shadow: 0 0 10px currentColor,
+                 0 0 20px currentColor,
+                 0 0 30px currentColor;
+  }
+  50% { 
+    opacity: 0.8;
+    text-shadow: 0 0 5px currentColor,
+                 0 0 10px currentColor,
+                 0 0 15px currentColor;
+  }
 }
 
 @keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-10px); }
+  0%, 100% { 
+    transform: translateY(0) rotate(0deg);
+    filter: brightness(1);
+  }
+  25% {
+    transform: translateY(-5px) rotate(1deg);
+    filter: brightness(1.1);
+  }
+  75% {
+    transform: translateY(-8px) rotate(-1deg);
+    filter: brightness(1.05);
+  }
+  50% { 
+    transform: translateY(-10px) rotate(0deg);
+    filter: brightness(1.2);
+  }
+}
+
+@keyframes casino-button-glow {
+  0%, 100% { 
+    box-shadow: 0 0 15px rgba(220, 38, 38, 0.5),
+                inset 0 0 15px rgba(234, 179, 8, 0.3);
+    filter: brightness(1);
+  }
+  50% { 
+    box-shadow: 0 0 30px rgba(220, 38, 38, 0.8),
+                inset 0 0 30px rgba(234, 179, 8, 0.5);
+    filter: brightness(1.2);
+  }
+}
+
+@keyframes spin-button-rotate {
+  0% { transform: rotate(0deg) scale(1); }
+  50% { transform: rotate(180deg) scale(0.95); }
+  100% { transform: rotate(360deg) scale(1); }
+}
+
+@keyframes casino-button-pulse {
+  0%, 100% { 
+    transform: scale(1);
+    background-position: 0% 50%;
+    filter: brightness(1);
+  }
+  50% { 
+    transform: scale(1.05);
+    background-position: 100% 50%;
+    filter: brightness(1.2);
+  }
+}
+
+@keyframes gold-shimmer {
+  0% { 
+    background-position: 200% 50%;
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% { 
+    background-position: -200% 50%;
+    opacity: 0.6;
+  }
+}
+
+@keyframes multiplier-bounce {
+  0%, 20%, 50%, 80%, 100% { 
+    transform: translateY(0);
+    filter: brightness(1);
+  }
+  40% { 
+    transform: translateY(-10px);
+    filter: brightness(1.2);
+  }
+  60% { 
+    transform: translateY(-5px);
+    filter: brightness(1.1);
+  }
+}
+
+@keyframes bounce-soft {
+  0%, 100% { 
+    transform: translateY(0) scale(1);
+    filter: brightness(1);
+  }
+  50% { 
+    transform: translateY(-2px) scale(1.02);
+    filter: brightness(1.1);
+  }
+}
+
+@keyframes slot-blur {
+  0% { 
+    filter: blur(0px) brightness(1);
+    transform: scale(1);
+  }
+  25% {
+    filter: blur(1px) brightness(1.1);
+    transform: scale(1.02);
+  }
+  50% { 
+    filter: blur(2px) brightness(1.2);
+    transform: scale(1.05);
+  }
+  75% {
+    filter: blur(1px) brightness(1.1);
+    transform: scale(1.02);
+  }
+  100% { 
+    filter: blur(0px) brightness(1);
+    transform: scale(1);
+  }
+}
+
+@keyframes symbol-glow {
+  0%, 100% { 
+    filter: drop-shadow(0 0 5px rgba(234, 179, 8, 0.5));
+    transform: scale(1);
+  }
+  50% { 
+    filter: drop-shadow(0 0 15px rgba(234, 179, 8, 0.8));
+    transform: scale(1.05);
+  }
+}
+
+@keyframes metal-shine {
+  0% { 
+    background-position: -200% 0;
+    opacity: 0.8;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% { 
+    background-position: 200% 0;
+    opacity: 0.8;
+  }
+}
+
+.border-gradient-metal {
+  background: linear-gradient(90deg, 
+    #333 0%, 
+    #888 25%, 
+    #ccc 50%, 
+    #888 75%, 
+    #333 100%
+  );
+  background-size: 200% 100%;
+  animation: metal-shine 3s linear infinite;
+  box-shadow: 
+    inset 0 0 10px rgba(255,255,255,0.2),
+    0 0 15px rgba(0,0,0,0.3);
+}
+
+.perspective {
+  perspective: 1000px;
+  transform-style: preserve-3d;
+  backface-visibility: hidden;
+}
+
+.symbol-glow {
+  animation: symbol-glow 2s ease-in-out infinite;
+  filter: drop-shadow(0 0 10px rgba(234, 179, 8, 0.6));
 }
 
 .slot-spinning {
-  animation: slot-spin 0.5s linear infinite;
+  animation: slot-spin 0.3s linear infinite;
+  will-change: transform;
 }
 
 .win-pulse {
   animation: win-pulse 0.5s ease-in-out;
+  will-change: transform, filter;
 }
 
 .float {
   animation: float 3s ease-in-out infinite;
+  will-change: transform, filter;
 }
 
 .neon-text {
-  text-shadow: 0 0 5px currentColor, 0 0 10px currentColor, 0 0 20px currentColor;
+  text-shadow: 
+    0 0 5px currentColor,
+    0 0 10px currentColor,
+    0 0 20px currentColor;
   animation: neon-flicker 2s infinite;
+  will-change: opacity, text-shadow;
+}
+
+.casino-button-active {
+  animation: 
+    casino-button-glow 1.5s infinite,
+    casino-button-pulse 2s infinite;
+  background-size: 200% 200%;
+  will-change: transform, filter, box-shadow;
+}
+
+.spin-button-icon {
+  animation: spin-button-rotate 2s linear infinite;
+  will-change: transform;
+}
+
+.multiplier-active {
+  animation: multiplier-bounce 2s infinite;
+  will-change: transform, filter;
+}
+
+.casino-button-hover {
+  transition: all 0.3s ease;
+  background: linear-gradient(45deg, 
+    #dc2626,
+    #b91c1c,
+    #991b1b
+  );
+  box-shadow: 
+    0 0 20px rgba(220, 38, 38, 0.5),
+    inset 0 0 10px rgba(255,255,255,0.2);
+  border: 2px solid #fcd34d;
+  position: relative;
+  overflow: hidden;
+  will-change: transform, box-shadow;
+}
+
+.casino-button-hover::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 200%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(252, 211, 77, 0.2),
+    rgba(252, 211, 77, 0.4),
+    rgba(252, 211, 77, 0.2),
+    transparent
+  );
+  animation: gold-shimmer 2s infinite linear;
+  will-change: opacity, background-position;
+}
+
+.casino-button-hover:hover {
+  transform: scale(1.05);
+  box-shadow: 
+    0 0 30px rgba(220, 38, 38, 0.8),
+    0 0 50px rgba(234, 179, 8, 0.3),
+    inset 0 0 15px rgba(255,255,255,0.3);
+  border-color: #fbbf24;
+}
+
+.casino-button-hover:active {
+  transform: scale(0.95);
+}
+
+.casino-text {
+  background: linear-gradient(to right,
+    #fcd34d,
+    #f59e0b,
+    #fcd34d
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+  font-weight: bold;
+  letter-spacing: 1px;
+  will-change: background-position;
+}
+
+.animate-bounce-soft {
+  animation: bounce-soft 2s ease-in-out infinite;
+  will-change: transform, filter;
+}
+
+.animate-slot-blur {
+  animation: slot-blur 0.2s linear infinite;
+  will-change: transform, filter;
 } 

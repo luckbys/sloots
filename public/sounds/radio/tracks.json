@@ -1,0 +1,26 @@
+[
+  {
+    "title": "Música de Fundo 1",
+    "artist": "Sloots Radio",
+    "filename": "track1.mp3",
+    "duration": 180,
+    "addedAt": "2024-02-07T00:00:00.000Z",
+    "addedBy": "Sistema"
+  },
+  {
+    "title": "Música de Fundo 2",
+    "artist": "Sloots Radio",
+    "filename": "track2.mp3",
+    "duration": 210,
+    "addedAt": "2024-02-07T00:00:00.000Z",
+    "addedBy": "Sistema"
+  },
+  {
+    "title": "Música de Fundo 3",
+    "artist": "Sloots Radio",
+    "filename": "track3.mp3",
+    "duration": 195,
+    "addedAt": "2024-02-07T00:00:00.000Z",
+    "addedBy": "Sistema"
+  }
+] 

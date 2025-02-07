@@ -67,7 +67,11 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
       const updatedUser = await AuthService.updateUser(data);
       AuthService.setAuthData(AuthService.getStoredToken()!, updatedUser);
       setUser(updatedUser);
-      toast.success('Perfil atualizado com sucesso!');
+      if ('balance' in data) {
+        toast.success('Saldo atualizado!');
+      } else {
+        toast.success('Perfil atualizado com sucesso!');
+      }
     } catch (error) {
       handleAuthError(error, 'Erro ao atualizar perfil');
     } finally {

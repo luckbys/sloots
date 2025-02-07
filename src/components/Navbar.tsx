@@ -2,6 +2,7 @@ import { FC } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Coins, User, LogOut, Settings } from 'lucide-react';
+import RadioPlayer from './RadioPlayer';
 
 const Navbar: FC = () => {
   const { user, logout, isAdmin } = useAuth();
@@ -21,6 +22,13 @@ const Navbar: FC = () => {
             <Coins className="w-8 h-8 text-yellow-500" />
             <span className="text-2xl font-bold text-yellow-500">Sloots</span>
           </Link>
+
+          {/* Player de Rádio */}
+          {user && (
+            <div className="flex-1 mx-8">
+              <RadioPlayer />
+            </div>
+          )}
 
           {/* Menu */}
           <div className="flex items-center gap-4">
