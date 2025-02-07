@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, memo } from 'react';
 import { toast } from 'sonner';
 import { nanoid } from 'nanoid';
 import SlotReel from './SlotReel';
@@ -7,6 +7,7 @@ import WinHistory, { WinRecord } from './WinHistory';
 import { formatCurrency } from '../utils/format';
 import Confetti from './Confetti';
 import { useSound } from '../hooks/useSound';
+import ShareButton from './ShareButton';
 
 
 const SYMBOLS = ['🍒', '7️⃣', '🎰', '💎', '🌟', '🍋', '👑', '🃏'] as const;
@@ -99,6 +100,31 @@ const SlotMachine = () => {
     return Math.floor(LEVEL_XP_BASE * Math.pow(LEVEL_MULTIPLIER, level - 1));
   }, [level]);
 
+  // Função para gerar mensagem de compartilhamento
+  const generateShareMessage = useCallback((win: number, isJackpot: boolean) => {
+    const messages = {
+      jackpot: [
+        '🎰 JACKPOT INCRÍVEL! 🎉',
+        `Acabei de ganhar ${formatCurrency(win)} no Sloots!`,
+        '🎲 Venha tentar a sua sorte também!'
+      ],
+      bigWin: [
+        '🎰 Grande Vitória! 💰',
+        `Ganhei ${formatCurrency(win)} no Sloots!`,
+        '🎲 Tente sua sorte você também!'
+      ],
+      normal: [
+        '🎰 Nova Vitória! ✨',
+        `Ganhei ${formatCurrency(win)} jogando Sloots!`,
+        '🎲 Venha jogar também!'
+      ]
+    };
+
+    if (isJackpot) return messages.jackpot.join('\n');
+    if (win >= 100) return messages.bigWin.join('\n');
+    return messages.normal.join('\n');
+  }, []);
+
   // Corrigir a função checkWin para evitar cálculos incorretos
   const checkWin = useCallback((newReels: string[]) => {
     if (!newReels || newReels.length !== 3) return;
@@ -166,7 +192,7 @@ const SlotMachine = () => {
         const newRecord: WinRecord = {
           id: nanoid(),
           amount: finalWinAmount,
-          symbols: [...newReels], // Clone do array para evitar referências
+          symbols: [...newReels],
           timestamp: new Date(),
           isJackpot
         };
@@ -203,7 +229,7 @@ const SlotMachine = () => {
       console.error('Erro ao verificar vitória:', error);
       toast.error('Ocorreu um erro ao verificar o resultado');
     }
-  }, [bet, multiplier, xp, level, nextLevelXp, jackpotAmount, isWildcard, playSound]);
+  }, [bet, multiplier, xp, level, nextLevelXp, jackpotAmount, isWildcard, playSound, generateShareMessage]);
 
   // Melhorar a função spin
   const spin = useCallback(() => {
@@ -336,6 +362,33 @@ const SlotMachine = () => {
     return () => toggleBackground(false);
   }, []);
 
+  // Modificar o componente WinHistory para incluir o botão de compartilhamento
+  const WinRecordItem = memo(({ record }: { record: WinRecord }) => (
+    <div className={`flex items-center justify-between p-3 rounded-lg ${
+      record.isJackpot ? 'bg-purple-900/30' : 'bg-black/20'
+    }`}>
+      <div className="flex items-center gap-2">
+        <div className="flex">
+          {record.symbols.map((symbol, idx) => (
+            <span key={idx} className="text-2xl">{symbol}</span>
+          ))}
+        </div>
+        <span className={`${record.isJackpot ? 'text-yellow-400' : 'text-green-400'} font-bold`}>
+          +{formatCurrency(record.amount)}
+        </span>
+      </div>
+      <div className="flex items-center gap-2">
+        <ShareButton
+          title="Vitória no Sloots! 🎰" 
+          text={`Ganhei ${formatCurrency(record.amount)} no Sloots! 🎰`}
+        />
+        <span className="text-xs text-gray-400">
+          {new Date(record.timestamp).toLocaleTimeString()}
+        </span>
+      </div>
+    </div>
+  ));
+
   return (
     <>
       <Confetti active={showConfetti} />
@@ -415,8 +468,14 @@ const SlotMachine = () => {
 
               {/* Último ganho */}
               {lastWin > 0 && (
-                <div className="text-green-400 text-xl animate-bounce mb-4 text-center">
-                  +{formatCurrency(lastWin)}
+                <div className="flex flex-col items-center gap-2 mb-4">
+                  <div className="text-green-400 text-xl animate-bounce">
+                    +{formatCurrency(lastWin)}
+                  </div>
+                  <ShareButton
+                    title="Vitória no Sloots! 🎰"
+                    text={generateShareMessage(lastWin, showConfetti)}
+                  />
                 </div>
               )}
 

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 const sounds = {
   spin: '/sounds/spin.mp3',
@@ -10,6 +10,7 @@ const sounds = {
 
 export const useSound = () => {
   const audioRefs = useRef<Record<keyof typeof sounds, HTMLAudioElement>>({} as any);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
     Object.entries(sounds).forEach(([key, path]) => {
@@ -21,7 +22,17 @@ export const useSound = () => {
       audioRefs.current[key as keyof typeof sounds] = audio;
     });
 
+    const handleInteraction = () => {
+      if (!isInitialized) {
+        setIsInitialized(true);
+        document.removeEventListener('click', handleInteraction);
+      }
+    };
+
+    document.addEventListener('click', handleInteraction);
+
     return () => {
+      document.removeEventListener('click', handleInteraction);
       Object.values(audioRefs.current).forEach(audio => {
         audio.pause();
         audio.currentTime = 0;
@@ -29,15 +40,23 @@ export const useSound = () => {
     };
   }, []);
 
-  const play = (sound: keyof typeof sounds) => {
-    const audio = audioRefs.current[sound];
-    if (audio) {
-      audio.currentTime = 0;
-      audio.play().catch(console.error);
+  const play = async (sound: keyof typeof sounds) => {
+    if (!isInitialized) return;
+    
+    try {
+      const audio = audioRefs.current[sound];
+      if (audio) {
+        audio.currentTime = 0;
+        await audio.play();
+      }
+    } catch (error) {
+      console.warn('Erro ao tocar áudio:', error);
     }
   };
 
   const toggleBackground = (playing: boolean) => {
+    if (!isInitialized) return;
+
     const bgMusic = audioRefs.current.background;
     if (playing) {
       bgMusic?.play().catch(console.error);
@@ -46,5 +65,5 @@ export const useSound = () => {
     }
   };
 
-  return { play, toggleBackground };
+  return { play, toggleBackground, isInitialized };
 }; 
